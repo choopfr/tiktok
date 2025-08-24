@@ -11,45 +11,59 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Custom styles for a vivid look and feel */
+        /* Custom styles for a vivid, animated, and responsive UI */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #111827; /* Dark gray background */
+            background-color: #0A0A0A; /* Near-black background */
+            overflow: hidden; /* Hide scrollbars from canvas */
+        }
+        #background-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
         }
         .main-container {
-            background: radial-gradient(circle at top, rgba(31, 41, 55, 0.9) 0%, rgba(17, 24, 39, 0.9) 100%), #111827;
+            background: rgba(15, 15, 20, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-radius: 1.5rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            transition: all 0.3s ease;
         }
-        .input-url {
+        .input-url, .input-filename {
             background-color: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
             transition: all 0.3s ease;
         }
-        .input-url:focus {
+        .input-url:focus, .input-filename:focus {
             background-color: rgba(255, 255, 255, 0.1);
-            border-color: #a855f7; /* Purple accent */
-            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.3);
+            border-color: #A78BFA; /* Purple accent */
+            box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.3);
         }
-        .btn-download {
-            background: linear-gradient(90deg, #a855f7, #d946ef); /* Purple to Fuchsia gradient */
+        .btn {
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.2);
         }
-        .btn-download:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(168, 85, 247, 0.3);
+        .btn:hover:not(:disabled) {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
         }
-        .btn-download:disabled {
+        .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
             transform: translateY(0);
             box-shadow: none;
         }
+        .btn-main, .btn-video, .btn-audio {
+            background: linear-gradient(90deg, #8B5CF6, #A78BFA); /* Purple gradient */
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.2);
+        }
         /* Custom spinner animation */
         .spinner {
-            border-top-color: #a855f7;
+            border-top-color: #A78BFA; /* Purple spinner */
             animation: spin 1s linear infinite;
         }
         @keyframes spin {
@@ -58,155 +72,278 @@
         /* Result card animation */
         .result-card {
             animation: fadeIn 0.5s ease-out;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        /* QoL feature styles */
+        .btn-paste, .btn-clear {
+            background-color: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+        }
+        .btn-paste:hover, .btn-clear:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
     </style>
 </head>
-<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
-
-    <div class="main-container w-full max-w-2xl mx-auto p-6 sm:p-10 text-center">
-        <!-- Header Section -->
-        <div class="mb-8">
-            <h1 class="text-4xl sm:text-5xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-fuchsia-500">
-                TikTok Downloader
-            </h1>
-            <p class="text-gray-400 text-lg">Download any TikTok video without the watermark.</p>
-        </div>
-
-        <!-- Input Form -->
-        <form id="downloadForm" class="space-y-6">
-            <div class="relative">
-                <input 
-                    type="url" 
-                    id="tiktokUrl" 
-                    placeholder="Paste TikTok video URL here..." 
-                    class="input-url w-full p-4 pr-12 text-lg text-white rounded-xl outline-none"
-                    required
-                >
-                <!-- SVG icon for the input field -->
-                <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-                </svg>
+<body class="text-white">
+    <canvas id="background-canvas"></canvas>
+    <div class="flex items-center justify-center min-h-screen p-4 relative z-10">
+        <div class="main-container w-full max-w-2xl mx-auto p-6 sm:p-10 text-center">
+            <!-- Header Section -->
+            <div class="mb-8">
+                <h1 class="text-4xl sm:text-5xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-purple-200">
+                    TikTok Downloader
+                </h1>
+                <p class="text-gray-400 text-lg">Download any TikTok video or audio without the watermark.</p>
             </div>
-            <button 
-                type="submit" 
-                id="downloadBtn"
-                class="btn-download w-full flex items-center justify-center gap-3 p-4 text-lg font-bold rounded-xl"
-            >
-                <!-- Spinner (hidden by default) -->
-                <div id="spinner" class="spinner w-6 h-6 rounded-full border-4 border-white/20 hidden"></div>
-                <span>Download Video</span>
-            </button>
-        </form>
 
-        <!-- Message & Result Area -->
-        <div id="messageArea" class="mt-6 text-lg"></div>
-        <div id="resultArea" class="mt-8"></div>
+            <!-- Input Form -->
+            <form id="downloadForm" class="space-y-6">
+                <div class="flex items-center gap-2">
+                    <div class="relative w-full">
+                        <input 
+                            type="url" 
+                            id="tiktokUrl" 
+                            placeholder="Paste TikTok video URL here..." 
+                            class="input-url w-full p-4 pl-4 pr-12 text-lg text-white rounded-xl outline-none"
+                            required
+                            autofocus
+                        >
+                        <button type="button" id="clearBtn" class="btn-clear absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-white hidden">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                        </button>
+                    </div>
+                    <button type="button" id="pasteBtn" class="btn btn-paste p-4 rounded-xl flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                    </button>
+                </div>
+                <button 
+                    type="submit" 
+                    id="downloadBtn"
+                    class="btn btn-main w-full flex items-center justify-center gap-3 p-4 text-lg font-bold rounded-xl"
+                >
+                    <div id="spinner" class="spinner w-6 h-6 rounded-full border-4 border-white/20 hidden"></div>
+                    <span>Download</span>
+                </button>
+            </form>
 
+            <!-- Message & Result Area -->
+            <div id="messageArea" class="mt-6 text-lg min-h-[28px]"></div>
+            <div id="resultArea" class="mt-8"></div>
+        </div>
     </div>
 
     <script>
-        // DOM element references
+        // --- Animated Background ---
+        const canvas = document.getElementById('background-canvas');
+        const ctx = canvas.getContext('2d');
+        let stars = [];
+        let mouse = { x: null, y: null };
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function initStars() {
+            stars = [];
+            let starsCount = Math.floor((canvas.width * canvas.height) / 10000);
+            for (let i = 0; i < starsCount; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: Math.random() * 1.5 + 0.5,
+                    vx: (Math.random() - 0.5) * 0.2,
+                    vy: (Math.random() - 0.5) * 0.2,
+                    originalRadius: this.radius,
+                });
+            }
+        }
+
+        function animateStars() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(star => {
+                star.x += star.vx;
+                star.y += star.vy;
+
+                if (star.x < 0 || star.x > canvas.width) star.vx = -star.vx;
+                if (star.y < 0 || star.y > canvas.height) star.vy = -star.vy;
+
+                // Interaction with mouse
+                let dx = mouse.x - star.x;
+                let dy = mouse.y - star.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < 150) {
+                    star.radius = Math.min(Math.max((150 - distance) / 20, star.originalRadius), 5);
+                } else {
+                    star.radius = star.originalRadius;
+                }
+
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(200, 200, 255, 0.8)';
+                ctx.fill();
+            });
+            requestAnimationFrame(animateStars);
+        }
+        
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            initStars();
+        });
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.x;
+            mouse.y = e.y;
+        });
+        
+        resizeCanvas();
+        initStars();
+        animateStars();
+
+        // --- Downloader App Logic ---
         const downloadForm = document.getElementById('downloadForm');
         const tiktokUrlInput = document.getElementById('tiktokUrl');
         const downloadBtn = document.getElementById('downloadBtn');
-        const spinner = document.getElementById('spinner');
+        const mainSpinner = document.getElementById('spinner');
         const messageArea = document.getElementById('messageArea');
         const resultArea = document.getElementById('resultArea');
+        const pasteBtn = document.getElementById('pasteBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        
+        downloadForm.addEventListener('submit', handleFormSubmit);
+        pasteBtn.addEventListener('click', pasteFromClipboard);
+        clearBtn.addEventListener('click', () => {
+            tiktokUrlInput.value = '';
+            clearBtn.classList.add('hidden');
+            tiktokUrlInput.focus();
+        });
+        tiktokUrlInput.addEventListener('input', () => {
+            clearBtn.classList.toggle('hidden', !tiktokUrlInput.value);
+        });
 
-        // Handle form submission
-        downloadForm.addEventListener('submit', async (e) => {
+        async function handleFormSubmit(e) {
             e.preventDefault();
             const url = tiktokUrlInput.value.trim();
-
             if (!url) {
                 showMessage('Please paste a TikTok URL.', 'error');
                 return;
             }
-
-            // Start loading state
             setLoading(true);
             clearOutput();
-
             try {
-                // The API endpoint from the original script
                 const apiUrl = `https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`;
-                
-                // Make the API request directly from the browser
                 const response = await fetch(apiUrl);
-                
-                if (!response.ok) {
-                    throw new Error(`API request failed with status: ${response.status}`);
-                }
-
+                if (!response.ok) throw new Error(`API request failed: ${response.statusText}`);
                 const data = await response.json();
-
-                // Check if the API response is successful and contains the video URL
-                if (data.code === 0 && data.data && data.data.play) {
-                    const videoUrl = data.data.play;
-                    const videoTitle = data.data.title || 'tiktok_video';
-                    const videoAuthor = data.data.author.nickname || 'unknown_author';
-                    
-                    // Sanitize filename
-                    const safeFilename = `${videoAuthor}_${videoTitle}`.replace(/[^a-zA-Z0-9_]/g, '_').substring(0, 50);
-
-                    displayResult(videoUrl, safeFilename);
-                    showMessage('Success! Your video is ready.', 'success');
+                if (data.code === 0 && data.data) {
+                    const { play: videoUrl, music: audioUrl, title, author } = data.data;
+                    const safeFilename = `${author.nickname || 'author'}_${title || 'tiktok'}`.replace(/[^a-zA-Z0-9_]/g, '_').substring(0, 50);
+                    displayResult(videoUrl, audioUrl, safeFilename);
+                    showMessage('Success! Your download is ready.', 'success');
                 } else {
-                    throw new Error(data.msg || 'Could not find the video. Please check the URL and try again.');
+                    throw new Error(data.msg || 'Could not find the video. Check the URL.');
                 }
-
             } catch (error) {
                 console.error('Download Error:', error);
                 showMessage(error.message, 'error');
             } finally {
-                // End loading state
                 setLoading(false);
-            }
-        });
-
-        // Function to control the loading state of the UI
-        function setLoading(isLoading) {
-            if (isLoading) {
-                downloadBtn.disabled = true;
-                spinner.classList.remove('hidden');
-                downloadBtn.querySelector('span').textContent = 'Processing...';
-            } else {
-                downloadBtn.disabled = false;
-                spinner.classList.add('hidden');
-                downloadBtn.querySelector('span').textContent = 'Download Video';
             }
         }
 
-        // Function to display messages to the user
+        function setLoading(isLoading) {
+            downloadBtn.disabled = isLoading;
+            mainSpinner.classList.toggle('hidden', !isLoading);
+            downloadBtn.querySelector('span').textContent = isLoading ? 'Processing...' : 'Download';
+        }
+
         function showMessage(message, type = 'info') {
-            messageArea.innerHTML = ''; // Clear previous messages
+            messageArea.innerHTML = '';
             const messageEl = document.createElement('p');
             messageEl.textContent = message;
-            messageEl.className = type === 'error' ? 'text-red-400' : 'text-green-400';
+            const colorClass = type === 'error' ? 'text-red-400' : 'text-purple-300';
+            messageEl.className = `transition-opacity duration-300 ${colorClass}`;
             messageArea.appendChild(messageEl);
         }
         
-        // Function to display the downloaded video and download button
-        function displayResult(videoUrl, filename) {
+        function displayResult(videoUrl, audioUrl, baseFilename) {
             resultArea.innerHTML = `
-                <div class="result-card bg-gray-800 p-6 rounded-2xl border border-gray-700">
-                    <video controls class="w-full rounded-lg mb-6" src="${videoUrl}" preload="metadata"></video>
-                    <a 
-                        href="${videoUrl}" 
-                        download="${filename}.mp4"
-                        class="btn-download inline-block w-full p-4 text-lg font-bold rounded-xl"
-                    >
-                        Save Video to Device
-                    </a>
+                <div class="result-card bg-gray-800/50 p-6 rounded-2xl border border-gray-700 text-left">
+                    <video controls class="w-full rounded-lg mb-4" src="${videoUrl}" preload="metadata"></video>
+                    <div class="bg-black/20 p-2 rounded-lg mb-6 flex items-center">
+                        <input type="text" id="filenameInput" value="${baseFilename}" class="input-filename w-full bg-transparent text-gray-300 text-sm outline-none p-1">
+                        <span id="fileExtensionDisplay" class="text-gray-500 text-sm pr-2">.mp4</span>
+                    </div>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <button id="saveVideoBtn" class="btn btn-video w-full flex items-center justify-center gap-3 p-4 text-lg font-bold rounded-xl"><span>Save Video</span></button>
+                        <button id="saveAudioBtn" class="btn btn-audio w-full flex items-center justify-center gap-3 p-4 text-lg font-bold rounded-xl"><span>Save Audio</span></button>
+                    </div>
                 </div>
             `;
+            const filenameInput = document.getElementById('filenameInput');
+            const fileExtDisplay = document.getElementById('fileExtensionDisplay');
+            document.getElementById('saveVideoBtn').addEventListener('click', (e) => {
+                fileExtDisplay.textContent = '.mp4';
+                forceDownload(videoUrl, '.mp4', e.currentTarget);
+            });
+            document.getElementById('saveAudioBtn').addEventListener('click', (e) => {
+                fileExtDisplay.textContent = '.mp3';
+                forceDownload(audioUrl, '.mp3', e.currentTarget);
+            });
         }
 
-        // Function to clear previous results and messages
+        async function forceDownload(url, extension, buttonEl) {
+            const filename = document.getElementById('filenameInput').value.trim() || 'download';
+            const fullFilename = filename + extension;
+            
+            const originalText = buttonEl.querySelector('span').textContent;
+            buttonEl.disabled = true;
+            buttonEl.querySelector('span').textContent = 'Preparing...';
+            showMessage('Preparing your download, please wait...', 'info');
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Network response was not ok.');
+                const blob = await response.blob();
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = fullFilename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+                showMessage('Download started!', 'success');
+            } catch (error) {
+                console.error('Force Download Error:', error);
+                showMessage('Failed to download file. Please try again.', 'error');
+            } finally {
+                buttonEl.disabled = false;
+                buttonEl.querySelector('span').textContent = originalText;
+            }
+        }
+
+        async function pasteFromClipboard() {
+            try {
+                if (!navigator.clipboard || !navigator.clipboard.readText) {
+                    throw new Error('Clipboard API not available.');
+                }
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    tiktokUrlInput.value = text;
+                    clearBtn.classList.remove('hidden');
+                    showMessage('Pasted from clipboard!', 'success');
+                } else {
+                    showMessage('Clipboard is empty.', 'error');
+                }
+            } catch (err) {
+                console.error('Paste Error:', err);
+                showMessage('Could not paste. Please use Ctrl+V or Command+V.', 'error');
+            }
+        }
+
         function clearOutput() {
             messageArea.innerHTML = '';
             resultArea.innerHTML = '';
