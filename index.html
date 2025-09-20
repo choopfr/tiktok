@@ -3,140 +3,111 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TikTok Video Downloader</title>
+  <title>TikTok Downloader</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Inter', sans-serif; background-color: #0A0A0A; overflow-y: auto; }
-    #background-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
-    .main-container { background: rgba(15, 15, 20, 0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      border-radius: 1.5rem; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6);
-      transition: all 0.3s ease; }
-    .input-url, .input-filename { background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); transition: all 0.3s ease; }
-    .input-url:focus, .input-filename:focus { background-color: rgba(255,255,255,0.1); border-color: #A78BFA;
-      box-shadow: 0 0 0 3px rgba(167,139,250,0.3); }
-    .btn { transition: all 0.3s ease; }
-    .btn:hover:not(:disabled) { transform: translateY(-3px) scale(1.02); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: translateY(0); box-shadow: none; }
-    .btn-main, .btn-video, .btn-audio { background: linear-gradient(90deg, #8B5CF6, #A78BFA); box-shadow: 0 4px 15px rgba(139,92,246,0.2); }
-    .spinner { border-top-color: #A78BFA; animation: spin 1s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .result-card { animation: fadeIn 0.5s ease-out; transition: transform 0.3s ease, box-shadow 0.3s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    .btn-paste, .btn-clear { background-color: rgba(255,255,255,0.1); backdrop-filter: blur(5px); }
-    .btn-paste:hover, .btn-clear:hover { background-color: rgba(255,255,255,0.2); }
-  </style>
 </head>
-<body class="text-white">
-<canvas id="background-canvas"></canvas>
-<div class="flex items-center justify-center min-h-screen p-4 relative z-10">
-  <div class="main-container w-full max-w-2xl mx-auto p-6 sm:p-10 text-center">
-    <div class="mb-8">
-      <h1 class="text-4xl sm:text-5xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-purple-200">TikTok Downloader</h1>
-      <p class="text-gray-400 text-lg">Download any TikTok video, audio, or photos without the watermark.</p>
-    </div>
-    <form id="downloadForm" class="space-y-6">
-      <div class="flex items-center gap-2">
-        <div class="relative w-full">
-          <input type="url" id="tiktokUrl" placeholder="Paste TikTok video URL here..." class="input-url w-full p-4 pl-4 pr-12 text-lg text-white rounded-xl outline-none" required autofocus>
-          <button type="button" id="clearBtn" class="btn-clear absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-white hidden">✕</button>
-        </div>
-        <button type="button" id="pasteBtn" class="btn btn-paste p-4 rounded-xl flex-shrink-0">📋</button>
-      </div>
-      <button type="submit" id="downloadBtn" class="btn btn-main w-full flex items-center justify-center gap-3 p-4 text-lg font-bold rounded-xl">
-        <div id="spinner" class="spinner w-6 h-6 rounded-full border-4 border-white/20 hidden"></div><span>Download</span>
-      </button>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
+  <div class="w-full max-w-2xl bg-gray-800 p-6 rounded-2xl shadow-lg">
+    <h1 class="text-2xl font-bold mb-4">TikTok Downloader</h1>
+    <form id="downloadForm" class="flex gap-2 mb-4">
+      <input id="tiktokUrl" type="url" placeholder="Paste TikTok URL" class="flex-1 p-2 rounded bg-gray-700 text-white outline-none">
+      <button class="bg-green-600 px-4 py-2 rounded">Fetch</button>
     </form>
-    <div id="messageArea" class="mt-6 text-lg min-h-[28px]"></div>
-    <div id="resultArea" class="mt-8"></div>
-    <div class="mt-10 text-xs text-gray-400 opacity-70 select-none pointer-events-none">© 2025 choopfr.</div>
+    <div id="message" class="mb-3 text-sm"></div>
+    <div id="result"></div>
   </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 <script>
-// --- Downloader logic additions for photos ---
-function displayResultVideo(videoUrl, audioUrl, baseFilename) {
-  document.getElementById('resultArea').innerHTML = `
-    <div class="result-card bg-gray-800/50 p-6 rounded-2xl border border-gray-700 text-left">
-      <video controls class="w-full rounded-lg mb-4" src="${videoUrl}" preload="metadata"></video>
-      <div class="bg-black/20 p-2 rounded-lg mb-6 flex items-center">
-        <input type="text" id="filenameInput" value="${baseFilename}" class="input-filename w-full bg-transparent text-gray-300 text-sm outline-none p-1">
-        <span id="fileExtensionDisplay" class="text-gray-500 text-sm pr-2">.mp4</span>
-      </div>
-      <div class="grid sm:grid-cols-2 gap-4">
-        <button id="saveVideoBtn" class="btn btn-video w-full p-4 text-lg font-bold rounded-xl"><span>Save Video</span></button>
-        <button id="saveAudioBtn" class="btn btn-audio w-full p-4 text-lg font-bold rounded-xl"><span>Save Audio</span></button>
-      </div>
-    </div>`;
+const form=document.getElementById("downloadForm");
+const urlInput=document.getElementById("tiktokUrl");
+const msg=document.getElementById("message");
+const result=document.getElementById("result");
+
+form.addEventListener("submit",async e=>{
+  e.preventDefault();result.innerHTML="";show("Fetching...","info");
+  try{
+    const res=await fetch("https://www.tikwm.com/api/",{
+      method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},
+      body:"url="+encodeURIComponent(urlInput.value)
+    });
+    const {code,data,msg:err}=await res.json();
+    if(code!==0||!data) throw new Error(err||"Invalid link");
+    const safe=`${data.author?.nickname||"author"}_${data.title||"tiktok"}`.replace(/[^a-zA-Z0-9_]/g,"_").substring(0,50);
+    data.images?.length?showPhotos(data.images,safe):showVideo(data.play,data.music,safe);
+    show("Success!","success");
+  }catch(err){console.error(err);show("Error: "+err.message,"error");}
+});
+
+function show(text,type){
+  const colors={success:"text-green-400",error:"text-red-400",info:"text-blue-400"};
+  msg.className=colors[type]||"";msg.textContent=text;
 }
 
-function displayResultPhotos(images, baseFilename) {
-  const resultArea = document.getElementById('resultArea');
-  resultArea.innerHTML = `
-    <div class="result-card bg-gray-800/50 p-6 rounded-2xl border border-gray-700 text-left">
-      <div class="grid sm:grid-cols-2 gap-4 mb-4">
-        ${images.map((img,i)=>`
-          <div class="relative group">
-            <img src="${img}" class="rounded-lg w-full h-48 object-cover">
-            <div class="absolute bottom-2 left-2 flex gap-2 items-center">
-              <input type="checkbox" class="select-photo w-5 h-5 accent-purple-500" data-url="${img}" data-name="${baseFilename}_${i+1}.jpg">
-              <button class="btn bg-purple-600 px-3 py-1 rounded text-sm save-btn" data-url="${img}" data-name="${baseFilename}_${i+1}.jpg">Save</button>
-            </div>
-          </div>`).join("")}
-      </div>
-      <div class="flex gap-4">
-        <button id="saveSelectedBtn" class="btn btn-video w-full p-3 text-lg font-bold rounded-xl">Save Selected</button>
-        <button id="saveAllBtn" class="btn btn-main w-full p-3 text-lg font-bold rounded-xl">Save All</button>
-      </div>
-    </div>`;
+function showVideo(video,audio,name){
+  result.innerHTML=`<div class="bg-gray-700 p-4 rounded-lg">
+    <video src="${video}" controls class="w-full mb-3 rounded"></video>
+    <div class="flex flex-col gap-2">
+      <button onclick="forceDownload('${video}','${name}.mp4',this)" class="bg-green-600 p-2 rounded"><span>Save Video</span></button>
+      <button onclick="forceDownload('${audio}','${name}.mp3',this)" class="bg-blue-600 p-2 rounded"><span>Save Audio</span></button>
+    </div>
+  </div>`;
+}
 
-  resultArea.querySelectorAll('.save-btn').forEach(btn=>{
-    btn.addEventListener('click', async()=>{
-      const url=btn.dataset.url, name=btn.dataset.name;
-      const blob=await fetch(url).then(r=>r.blob());
-      saveAs(blob,name);
-    });
-  });
+function showPhotos(images,name){
+  result.innerHTML=`<div class="bg-gray-700 p-4 rounded-lg">
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+      ${images.map((img,i)=>`
+        <div class="relative border border-gray-600 rounded-lg overflow-hidden">
+          <img src="${img}" class="w-full h-32 object-cover">
+          <input type="checkbox" value="${img}" class="absolute top-2 left-2 w-5 h-5 accent-green-500">
+          <button onclick="forceDownload('${img}','${name}_${i+1}.jpg',this)" 
+            class="absolute bottom-2 right-2 bg-black/60 text-white px-2 py-1 rounded text-xs">
+            <span>Save</span>
+          </button>
+        </div>`).join("")}
+    </div>
+    <div class="flex justify-between gap-2">
+      <input type="text" id="filenameInput" value="${name}" class="flex-1 bg-gray-600 p-2 rounded text-sm outline-none">
+      <button onclick="downloadSelected('${name}',this)" class="bg-purple-600 px-4 py-2 rounded text-sm"><span>Download Selected</span></button>
+    </div>
+  </div>`;
+}
 
-  document.getElementById('saveSelectedBtn').addEventListener('click', async()=>{
-    const checked=[...document.querySelectorAll('.select-photo:checked')];
-    if(!checked.length) return alert("No photos selected.");
-    if(checked.length===1){
-      const url=checked[0].dataset.url, name=checked[0].dataset.name;
-      const blob=await fetch(url).then(r=>r.blob());
-      saveAs(blob,name);
-    } else {
-      const zip=new JSZip();
-      let i=1;
-      for(const chk of checked){
-        const blob=await fetch(chk.dataset.url).then(r=>r.blob());
-        zip.file(chk.dataset.name,blob);
-      }
-      const zipBlob=await zip.generateAsync({type:"blob"});
-      saveAs(zipBlob,`${baseFilename}_selected.zip`);
+async function forceDownload(url,extOrName,btn){
+  const input=document.getElementById("filenameInput");
+  const name=input?input.value.trim():"download";
+  const fname=extOrName.startsWith(".")?name+extOrName:extOrName;
+  const span=btn.querySelector("span")||btn;
+  const old=span.textContent;btn.disabled=true;span.textContent="Preparing...";
+  try{const r=await fetch(url);if(!r.ok)throw new Error("Network error");
+    const b=await r.blob();saveAs(b,fname);show("Download started!","success");
+  }catch(e){console.error(e);show("Failed to download.","error");}
+  btn.disabled=false;span.textContent=old;
+}
+
+async function downloadSelected(baseName,btn){
+  const boxes=[...result.querySelectorAll("input[type=checkbox]:checked")];
+  if(!boxes.length){show("No photos selected.","error");return;}
+  const files=boxes.map(b=>b.value);
+  const input=document.getElementById("filenameInput");
+  const name=input?input.value.trim()||baseName:baseName;
+  const span=btn.querySelector("span")||btn;
+  const old=span.textContent;btn.disabled=true;span.textContent="Processing...";
+
+  try{
+    if(files.length===1){ // single photo → save directly
+      const b=await fetch(files[0]).then(r=>r.blob());
+      saveAs(b,`${name}.jpg`);
+    }else{ // multiple → zip
+      const zip=new JSZip();let i=1;
+      for(const u of files){const b=await fetch(u).then(r=>r.blob());zip.file(`${name}_${i++}.jpg`,b);}
+      const c=await zip.generateAsync({type:"blob"});saveAs(c,`${name}.zip`);
     }
-  });
-
-  document.getElementById('saveAllBtn').addEventListener('click', async()=>{
-    if(images.length===1){
-      const blob=await fetch(images[0]).then(r=>r.blob());
-      saveAs(blob,`${baseFilename}_1.jpg`);
-    } else {
-      const zip=new JSZip();
-      images.forEach(async(img,i)=>{
-        const blob=await fetch(img).then(r=>r.blob());
-        zip.file(`${baseFilename}_${i+1}.jpg`,blob);
-      });
-      const zipBlob=await zip.generateAsync({type:"blob"});
-      saveAs(zipBlob,`${baseFilename}_all.zip`);
-    }
-  });
+    show("Download ready!","success");
+  }catch(e){console.error(e);show("Download failed.","error");}
+  btn.disabled=false;span.textContent=old;
 }
 </script>
 </body>
