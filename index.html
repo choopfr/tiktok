@@ -4,34 +4,31 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TikTok Video Downloader</title>
-
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Google Fonts: Inter -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-  <!-- JSZip + FileSaver for photo ZIP downloads -->
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
-
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #0A0A0A; overflow-y: auto; }
     #background-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
-    .main-container { background: rgba(15,15,20,0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      border-radius: 1.5rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6); transition: all 0.3s ease; }
-    .input-url,.input-filename { background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); transition: all 0.3s ease; }
-    .input-url:focus,.input-filename:focus { background-color: rgba(255,255,255,0.1); border-color:#A78BFA; box-shadow:0 0 0 3px rgba(167,139,250,0.3); }
-    .btn { transition: all 0.3s ease; } .btn:hover:not(:disabled){ transform:translateY(-3px) scale(1.02); box-shadow:0 10px 20px rgba(0,0,0,0.2);}
-    .btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
-    .btn-main,.btn-video,.btn-audio{background:linear-gradient(90deg,#8B5CF6,#A78BFA);box-shadow:0 4px 15px rgba(139,92,246,.2);}
-    .spinner{border-top-color:#A78BFA;animation:spin 1s linear infinite;}@keyframes spin{to{transform:rotate(360deg)}}
-    .result-card{animation:fadeIn .5s ease-out;transition:transform .3s ease,box-shadow .3s ease;}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
-    .btn-paste,.btn-clear{background-color:rgba(255,255,255,0.1);backdrop-filter:blur(5px);}
-    .btn-paste:hover,.btn-clear:hover{background-color:rgba(255,255,255,0.2);}
+    .main-container { background: rgba(15, 15, 20, 0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-radius: 1.5rem; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6);
+      transition: all 0.3s ease; }
+    .input-url, .input-filename { background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); transition: all 0.3s ease; }
+    .input-url:focus, .input-filename:focus { background-color: rgba(255,255,255,0.1); border-color: #A78BFA;
+      box-shadow: 0 0 0 3px rgba(167,139,250,0.3); }
+    .btn { transition: all 0.3s ease; }
+    .btn:hover:not(:disabled) { transform: translateY(-3px) scale(1.02); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: translateY(0); box-shadow: none; }
+    .btn-main, .btn-video, .btn-audio { background: linear-gradient(90deg, #8B5CF6, #A78BFA); box-shadow: 0 4px 15px rgba(139,92,246,0.2); }
+    .spinner { border-top-color: #A78BFA; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .result-card { animation: fadeIn 0.5s ease-out; transition: transform 0.3s ease, box-shadow 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .btn-paste, .btn-clear { background-color: rgba(255,255,255,0.1); backdrop-filter: blur(5px); }
+    .btn-paste:hover, .btn-clear:hover { background-color: rgba(255,255,255,0.2); }
   </style>
 </head>
 <body class="text-white">
@@ -42,144 +39,104 @@
       <h1 class="text-4xl sm:text-5xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-purple-200">TikTok Downloader</h1>
       <p class="text-gray-400 text-lg">Download any TikTok video, audio, or photos without the watermark.</p>
     </div>
-
-    <!-- Input Form -->
     <form id="downloadForm" class="space-y-6">
       <div class="flex items-center gap-2">
         <div class="relative w-full">
-          <input type="url" id="tiktokUrl" placeholder="Paste TikTok video/photo URL here..."
-                 class="input-url w-full p-4 pl-4 pr-12 text-lg text-white rounded-xl outline-none" required autofocus>
-          <button type="button" id="clearBtn"
-                  class="btn-clear absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-white hidden">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-            </svg>
-          </button>
+          <input type="url" id="tiktokUrl" placeholder="Paste TikTok video URL here..." class="input-url w-full p-4 pl-4 pr-12 text-lg text-white rounded-xl outline-none" required autofocus>
+          <button type="button" id="clearBtn" class="btn-clear absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-white hidden">✕</button>
         </div>
-        <button type="button" id="pasteBtn" class="btn btn-paste p-4 rounded-xl flex-shrink-0">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-          </svg>
-        </button>
+        <button type="button" id="pasteBtn" class="btn btn-paste p-4 rounded-xl flex-shrink-0">📋</button>
       </div>
-      <button type="submit" id="downloadBtn"
-              class="btn btn-main w-full flex items-center justify-center gap-3 p-4 text-lg font-bold rounded-xl">
-        <div id="spinner" class="spinner w-6 h-6 rounded-full border-4 border-white/20 hidden"></div>
-        <span>Download</span>
+      <button type="submit" id="downloadBtn" class="btn btn-main w-full flex items-center justify-center gap-3 p-4 text-lg font-bold rounded-xl">
+        <div id="spinner" class="spinner w-6 h-6 rounded-full border-4 border-white/20 hidden"></div><span>Download</span>
       </button>
     </form>
-
     <div id="messageArea" class="mt-6 text-lg min-h-[28px]"></div>
     <div id="resultArea" class="mt-8"></div>
-
-    <div class="mt-10 text-xs text-gray-400 opacity-70 select-none pointer-events-none">
-      © 2025 choopfr. (<a href="https://www.tiktok.com/@vivescence" class="underline text-purple-300 pointer-events-auto" target="_blank" rel="noopener">vivescence</a>)
-    </div>
+    <div class="mt-10 text-xs text-gray-400 opacity-70 select-none pointer-events-none">© 2025 choopfr.</div>
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 <script>
-/* --- Animated Background --- */
-const canvas=document.getElementById('background-canvas'),ctx=canvas.getContext('2d');
-let stars=[],mouse={x:null,y:null};
-function resizeCanvas(){canvas.width=innerWidth;canvas.height=innerHeight;}
-function initStars(){stars=[];let c=Math.floor((canvas.width*canvas.height)/10000);
-  for(let i=0;i<c;i++){stars.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,radius:Math.random()*1.5+.5,
-    vx:(Math.random()-.5)*.2,vy:(Math.random()-.5)*.2,originalRadius:this.radius});}}
-function animateStars(){ctx.clearRect(0,0,canvas.width,canvas.height);
-  stars.forEach(s=>{s.x+=s.vx;s.y+=s.vy;if(s.x<0||s.x>canvas.width)s.vx=-s.vx;if(s.y<0||s.y>canvas.height)s.vy=-s.vy;
-    let dx=mouse.x-s.x,dy=mouse.y-s.y,d=Math.sqrt(dx*dx+dy*dy);
-    s.radius=d<150?Math.min(Math.max((150-d)/20,s.originalRadius),5):s.originalRadius;
-    ctx.beginPath();ctx.arc(s.x,s.y,s.radius,0,Math.PI*2);ctx.fillStyle='rgba(200,200,255,.8)';ctx.fill();});
-  requestAnimationFrame(animateStars);}
-onresize=()=>{resizeCanvas();initStars();};onmousemove=e=>{mouse.x=e.x;mouse.y=e.y;};
-resizeCanvas();initStars();animateStars();
-
-/* --- Downloader Logic --- */
-const form=document.getElementById('downloadForm'),urlInput=document.getElementById('tiktokUrl'),
-  btn=document.getElementById('downloadBtn'),spinner=document.getElementById('spinner'),
-  msgArea=document.getElementById('messageArea'),resArea=document.getElementById('resultArea'),
-  pasteBtn=document.getElementById('pasteBtn'),clearBtn=document.getElementById('clearBtn');
-
-form.addEventListener('submit',handleFormSubmit);
-pasteBtn.addEventListener('click',pasteFromClipboard);
-clearBtn.addEventListener('click',()=>{urlInput.value='';clearBtn.classList.add('hidden');urlInput.focus();});
-urlInput.addEventListener('input',()=>clearBtn.classList.toggle('hidden',!urlInput.value));
-
-async function handleFormSubmit(e){
-  e.preventDefault();const url=urlInput.value.trim();if(!url){showMessage('Please paste a TikTok URL.','error');return;}
-  setLoading(true);clearOutput();
-  try{
-    const api=`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`;
-    const r=await fetch(api);if(!r.ok)throw new Error(`API failed: ${r.statusText}`);
-    const d=await r.json();if(d.code===0&&d.data){
-      const {play:video,music:audio,title,author,images}=d.data;
-      const safe=`${author.nickname||'author'}_${title||'tiktok'}`.replace(/[^a-zA-Z0-9_]/g,'_').substring(0,50);
-      images?.length?displayPhotos(images,safe):displayVideo(video,audio,safe);
-      showMessage('Success! Your download is ready.','success');
-    }else throw new Error(d.msg||'Could not find TikTok.');
-  }catch(err){console.error(err);showMessage(err.message,'error');}finally{setLoading(false);}
-}
-function setLoading(v){btn.disabled=v;spinner.classList.toggle('hidden',!v);btn.querySelector('span').textContent=v?'Processing...':'Download';}
-function showMessage(m,t='info'){msgArea.innerHTML='';const p=document.createElement('p');p.textContent=m;p.className=`transition-opacity ${t==='error'?'text-red-400':'text-purple-300'}`;msgArea.appendChild(p);}
-function clearOutput(){msgArea.innerHTML='';resArea.innerHTML='';}
-
-function displayVideo(video,audio,name){
-  resArea.innerHTML=`<div class="result-card bg-gray-800/50 p-6 rounded-2xl border border-gray-700 text-left">
-    <video controls class="w-full rounded-lg mb-4" src="${video}" preload="metadata"></video>
-    <div class="bg-black/20 p-2 rounded-lg mb-6 flex items-center">
-      <input type="text" id="filenameInput" value="${name}" class="input-filename w-full bg-transparent text-gray-300 text-sm outline-none p-1">
-      <span id="fileExt" class="text-gray-500 text-sm pr-2">.mp4</span>
-    </div>
-    <div class="grid sm:grid-cols-2 gap-4">
-      <button id="saveVideoBtn" class="btn btn-video p-4 font-bold rounded-xl"><span>Save Video</span></button>
-      <button id="saveAudioBtn" class="btn btn-audio p-4 font-bold rounded-xl"><span>Save Audio</span></button>
-    </div></div>`;
-  const input=document.getElementById('filenameInput'),ext=document.getElementById('fileExt');
-  document.getElementById('saveVideoBtn').onclick=e=>{ext.textContent='.mp4';forceDownload(video,'.mp4',e.currentTarget);};
-  document.getElementById('saveAudioBtn').onclick=e=>{ext.textContent='.mp3';forceDownload(audio,'.mp3',e.currentTarget);};
+// --- Downloader logic additions for photos ---
+function displayResultVideo(videoUrl, audioUrl, baseFilename) {
+  document.getElementById('resultArea').innerHTML = `
+    <div class="result-card bg-gray-800/50 p-6 rounded-2xl border border-gray-700 text-left">
+      <video controls class="w-full rounded-lg mb-4" src="${videoUrl}" preload="metadata"></video>
+      <div class="bg-black/20 p-2 rounded-lg mb-6 flex items-center">
+        <input type="text" id="filenameInput" value="${baseFilename}" class="input-filename w-full bg-transparent text-gray-300 text-sm outline-none p-1">
+        <span id="fileExtensionDisplay" class="text-gray-500 text-sm pr-2">.mp4</span>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <button id="saveVideoBtn" class="btn btn-video w-full p-4 text-lg font-bold rounded-xl"><span>Save Video</span></button>
+        <button id="saveAudioBtn" class="btn btn-audio w-full p-4 text-lg font-bold rounded-xl"><span>Save Audio</span></button>
+      </div>
+    </div>`;
 }
 
-function displayPhotos(images,name){
-  resArea.innerHTML=`<div class="result-card bg-gray-800/50 p-6 rounded-2xl border border-gray-700 text-left">
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-      ${images.map((img,i)=>`<div class="relative">
-        <img src="${img}" class="rounded-lg w-full object-cover">
-        <button onclick="forceDownload('${img}','${name}_${i+1}.jpg',this)" class="absolute bottom-2 right-2 bg-black/60 text-white px-2 py-1 rounded text-xs">Save</button>
-      </div>`).join('')}
-    </div>
-    <div class="bg-black/20 p-2 rounded-lg mb-6 flex items-center">
-      <input type="text" id="filenameInput" value="${name}" class="input-filename w-full bg-transparent text-gray-300 text-sm outline-none p-1">
-      <span class="text-gray-500 text-sm pr-2">.zip</span>
-    </div>
-    <button onclick="downloadAsZip(${JSON.stringify(images)},'${name}',this)" class="btn btn-video w-full p-4 font-bold rounded-xl"><span>Save All as ZIP</span></button>
-  </div>`;
-}
+function displayResultPhotos(images, baseFilename) {
+  const resultArea = document.getElementById('resultArea');
+  resultArea.innerHTML = `
+    <div class="result-card bg-gray-800/50 p-6 rounded-2xl border border-gray-700 text-left">
+      <div class="grid sm:grid-cols-2 gap-4 mb-4">
+        ${images.map((img,i)=>`
+          <div class="relative group">
+            <img src="${img}" class="rounded-lg w-full h-48 object-cover">
+            <div class="absolute bottom-2 left-2 flex gap-2 items-center">
+              <input type="checkbox" class="select-photo w-5 h-5 accent-purple-500" data-url="${img}" data-name="${baseFilename}_${i+1}.jpg">
+              <button class="btn bg-purple-600 px-3 py-1 rounded text-sm save-btn" data-url="${img}" data-name="${baseFilename}_${i+1}.jpg">Save</button>
+            </div>
+          </div>`).join("")}
+      </div>
+      <div class="flex gap-4">
+        <button id="saveSelectedBtn" class="btn btn-video w-full p-3 text-lg font-bold rounded-xl">Save Selected</button>
+        <button id="saveAllBtn" class="btn btn-main w-full p-3 text-lg font-bold rounded-xl">Save All</button>
+      </div>
+    </div>`;
 
-async function forceDownload(url,extOrName,btn){
-  const input=document.getElementById('filenameInput');const name=input?input.value.trim():'download';
-  const fname=extOrName.startsWith('.')?name+extOrName:extOrName;
-  const old=btn.querySelector('span').textContent;btn.disabled=true;btn.querySelector('span').textContent='Preparing...';
-  showMessage('Preparing your download...','info');
-  try{const r=await fetch(url);if(!r.ok)throw new Error('Network error');const b=await r.blob();saveAs(b,fname);showMessage('Download started!','success');}
-  catch(e){console.error(e);showMessage('Failed to download.','error');}
-  btn.disabled=false;btn.querySelector('span').textContent=old;
-}
+  resultArea.querySelectorAll('.save-btn').forEach(btn=>{
+    btn.addEventListener('click', async()=>{
+      const url=btn.dataset.url, name=btn.dataset.name;
+      const blob=await fetch(url).then(r=>r.blob());
+      saveAs(blob,name);
+    });
+  });
 
-async function downloadAsZip(images,name,btn){
-  const input=document.getElementById('filenameInput');const base=input?input.value.trim()||name:name;
-  const old=btn.querySelector('span').textContent;btn.disabled=true;btn.querySelector('span').textContent='Zipping...';
-  try{const zip=new JSZip();let i=1;
-    for(const u of images){const b=await fetch(u).then(r=>r.blob());zip.file(`${base}_${i++}.jpg`,b);}
-    const c=await zip.generateAsync({type:'blob'});saveAs(c,`${base}.zip`);showMessage('ZIP ready!','success');
-  }catch(e){console.error(e);showMessage('ZIP failed.','error');}
-  btn.disabled=false;btn.querySelector('span').textContent=old;
-}
+  document.getElementById('saveSelectedBtn').addEventListener('click', async()=>{
+    const checked=[...document.querySelectorAll('.select-photo:checked')];
+    if(!checked.length) return alert("No photos selected.");
+    if(checked.length===1){
+      const url=checked[0].dataset.url, name=checked[0].dataset.name;
+      const blob=await fetch(url).then(r=>r.blob());
+      saveAs(blob,name);
+    } else {
+      const zip=new JSZip();
+      let i=1;
+      for(const chk of checked){
+        const blob=await fetch(chk.dataset.url).then(r=>r.blob());
+        zip.file(chk.dataset.name,blob);
+      }
+      const zipBlob=await zip.generateAsync({type:"blob"});
+      saveAs(zipBlob,`${baseFilename}_selected.zip`);
+    }
+  });
 
-async function pasteFromClipboard(){
-  try{const text=await navigator.clipboard.readText();if(text){urlInput.value=text;clearBtn.classList.remove('hidden');showMessage('Pasted!','success');}
-  else showMessage('Clipboard empty.','error');}
-  catch(e){console.error(e);showMessage('Clipboard not available.','error');}
+  document.getElementById('saveAllBtn').addEventListener('click', async()=>{
+    if(images.length===1){
+      const blob=await fetch(images[0]).then(r=>r.blob());
+      saveAs(blob,`${baseFilename}_1.jpg`);
+    } else {
+      const zip=new JSZip();
+      images.forEach(async(img,i)=>{
+        const blob=await fetch(img).then(r=>r.blob());
+        zip.file(`${baseFilename}_${i+1}.jpg`,blob);
+      });
+      const zipBlob=await zip.generateAsync({type:"blob"});
+      saveAs(zipBlob,`${baseFilename}_all.zip`);
+    }
+  });
 }
 </script>
 </body>
