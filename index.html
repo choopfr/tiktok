@@ -9,31 +9,54 @@
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #0A0A0A; overflow-y: auto; }
-    .main-container { background: rgba(15,15,20,0.7); backdrop-filter: blur(20px); border-radius: 1.5rem;
-      border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6); }
-    .btn { transition: all 0.3s ease; }
-    .btn:hover:not(:disabled){ transform:translateY(-2px) scale(1.02); }
-    .btn:disabled{opacity:.5;cursor:not-allowed;}
-    .btn-main{background:linear-gradient(90deg,#8B5CF6,#A78BFA);}
-    .btn-video{background:linear-gradient(90deg,#10B981,#34D399);}
-    .btn-audio{background:linear-gradient(90deg,#3B82F6,#60A5FA);}
-    .result-card{animation:fadeIn .5s ease-out;}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+    body {
+      font-family: 'Inter', sans-serif;
+      background: radial-gradient(circle at top, #1E1E2F, #0A0A0A);
+      color: #fff;
+    }
+    .glass {
+      background: rgba(20, 20, 30, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 1.25rem;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    }
+    .btn {
+      transition: all 0.3s ease;
+      border-radius: 0.75rem;
+      font-weight: 600;
+      text-align: center;
+    }
+    .btn:hover:not(:disabled) { transform: translateY(-2px) scale(1.03); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-main { background: linear-gradient(90deg, #8B5CF6, #A78BFA); }
+    .btn-video { background: linear-gradient(90deg, #10B981, #34D399); }
+    .btn-audio { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
+    .btn-photo { background: linear-gradient(90deg, #EC4899, #F472B6); }
+    .result-card { animation: fadeIn 0.5s ease-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
-<body class="text-white flex items-center justify-center min-h-screen p-4">
-  <div class="main-container w-full max-w-3xl mx-auto p-6 sm:p-10">
-    <h1 class="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-purple-200">TikTok Downloader</h1>
+<body class="flex items-center justify-center min-h-screen p-6">
+  <div class="glass w-full max-w-4xl p-8 sm:p-10">
+    <h1 class="text-4xl font-extrabold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-300">
+      TikTok Downloader
+    </h1>
 
     <!-- Input Form -->
-    <form id="downloadForm" class="flex gap-2 mb-6">
+    <form id="downloadForm" class="flex flex-col sm:flex-row gap-3 mb-6">
       <input id="tiktokUrl" type="url" placeholder="Paste TikTok URL"
-        class="flex-1 p-3 rounded-xl bg-gray-700 text-white outline-none" required>
-      <button class="btn btn-main px-5 py-3 rounded-xl">Fetch</button>
+        class="flex-1 p-3 rounded-lg bg-gray-800/70 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400" required>
+      <button class="btn btn-main px-5 py-3">Fetch</button>
     </form>
 
-    <div id="message" class="mb-3 text-sm"></div>
+    <!-- Status -->
+    <div id="message" class="mb-4 text-sm font-medium"></div>
+
+    <!-- Results -->
     <div id="result"></div>
   </div>
 
@@ -64,31 +87,32 @@ function show(text,type){
 }
 
 function showVideo(video,audio,name){
-  result.innerHTML=`<div class="result-card bg-gray-800/60 p-6 rounded-2xl border border-gray-700">
-    <video src="${video}" controls class="w-full mb-3 rounded-lg"></video>
-    <div class="flex flex-col gap-2">
-      <button onclick="forceDownload('${video}','${name}.mp4',this)" class="btn btn-video p-3 rounded-xl"><span>Save Video</span></button>
-      <button onclick="forceDownload('${audio}','${name}.mp3',this)" class="btn btn-audio p-3 rounded-xl"><span>Save Audio</span></button>
+  result.innerHTML=`<div class="result-card glass p-6 mt-4">
+    <video src="${video}" controls class="w-full mb-4 rounded-lg border border-gray-700"></video>
+    <div class="flex flex-col sm:flex-row gap-3">
+      <button onclick="forceDownload('${video}','${name}.mp4',this)" class="btn btn-video px-4 py-3 flex-1"><span>Save Video</span></button>
+      <button onclick="forceDownload('${audio}','${name}.mp3',this)" class="btn btn-audio px-4 py-3 flex-1"><span>Save Audio</span></button>
     </div>
   </div>`;
 }
 
 function showPhotos(images,name){
-  result.innerHTML=`<div class="result-card bg-gray-800/60 p-6 rounded-2xl border border-gray-700">
+  result.innerHTML=`<div class="result-card glass p-6 mt-4">
     <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
       ${images.map((img,i)=>`
-        <div class="relative rounded-lg overflow-hidden border border-gray-600">
+        <div class="relative glass border border-gray-700 rounded-lg overflow-hidden">
           <img src="${img}" class="w-full h-auto block">
-          <input type="checkbox" value="${img}" class="absolute top-2 left-2 w-5 h-5 accent-green-500">
+          <input type="checkbox" value="${img}" class="absolute top-2 left-2 w-5 h-5 accent-purple-500">
           <button onclick="forceDownload('${img}','${name}_${i+1}.jpg',this)" 
-            class="absolute bottom-2 right-2 bg-black/60 text-white px-2 py-1 rounded text-xs">
+            class="absolute bottom-2 right-2 btn btn-photo text-xs px-3 py-1">
             <span>Save</span>
           </button>
         </div>`).join("")}
     </div>
     <div class="flex gap-2">
-      <input type="text" id="filenameInput" value="${name}" class="flex-1 bg-gray-700 p-2 rounded-lg text-sm outline-none">
-      <button onclick="downloadSelected('${name}',this)" class="btn btn-main px-4 py-2 rounded-lg"><span>Download Selected</span></button>
+      <input type="text" id="filenameInput" value="${name}" 
+        class="flex-1 p-3 rounded-lg bg-gray-800/70 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-400">
+      <button onclick="downloadSelected('${name}',this)" class="btn btn-main px-4 py-2"><span>Download Selected</span></button>
     </div>
   </div>`;
 }
