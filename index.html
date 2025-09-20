@@ -7,14 +7,32 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #0A0A0A; overflow-y: auto; }
+    .main-container { background: rgba(15,15,20,0.7); backdrop-filter: blur(20px); border-radius: 1.5rem;
+      border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6); }
+    .btn { transition: all 0.3s ease; }
+    .btn:hover:not(:disabled){ transform:translateY(-2px) scale(1.02); }
+    .btn:disabled{opacity:.5;cursor:not-allowed;}
+    .btn-main{background:linear-gradient(90deg,#8B5CF6,#A78BFA);}
+    .btn-video{background:linear-gradient(90deg,#10B981,#34D399);}
+    .btn-audio{background:linear-gradient(90deg,#3B82F6,#60A5FA);}
+    .result-card{animation:fadeIn .5s ease-out;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+  </style>
 </head>
-<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
-  <div class="w-full max-w-2xl bg-gray-800 p-6 rounded-2xl shadow-lg">
-    <h1 class="text-2xl font-bold mb-4">TikTok Downloader</h1>
-    <form id="downloadForm" class="flex gap-2 mb-4">
-      <input id="tiktokUrl" type="url" placeholder="Paste TikTok URL" class="flex-1 p-2 rounded bg-gray-700 text-white outline-none">
-      <button class="bg-green-600 px-4 py-2 rounded">Fetch</button>
+<body class="text-white flex items-center justify-center min-h-screen p-4">
+  <div class="main-container w-full max-w-3xl mx-auto p-6 sm:p-10">
+    <h1 class="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-purple-200">TikTok Downloader</h1>
+
+    <!-- Input Form -->
+    <form id="downloadForm" class="flex gap-2 mb-6">
+      <input id="tiktokUrl" type="url" placeholder="Paste TikTok URL"
+        class="flex-1 p-3 rounded-xl bg-gray-700 text-white outline-none" required>
+      <button class="btn btn-main px-5 py-3 rounded-xl">Fetch</button>
     </form>
+
     <div id="message" class="mb-3 text-sm"></div>
     <div id="result"></div>
   </div>
@@ -46,21 +64,21 @@ function show(text,type){
 }
 
 function showVideo(video,audio,name){
-  result.innerHTML=`<div class="bg-gray-700 p-4 rounded-lg">
-    <video src="${video}" controls class="w-full mb-3 rounded"></video>
+  result.innerHTML=`<div class="result-card bg-gray-800/60 p-6 rounded-2xl border border-gray-700">
+    <video src="${video}" controls class="w-full mb-3 rounded-lg"></video>
     <div class="flex flex-col gap-2">
-      <button onclick="forceDownload('${video}','${name}.mp4',this)" class="bg-green-600 p-2 rounded"><span>Save Video</span></button>
-      <button onclick="forceDownload('${audio}','${name}.mp3',this)" class="bg-blue-600 p-2 rounded"><span>Save Audio</span></button>
+      <button onclick="forceDownload('${video}','${name}.mp4',this)" class="btn btn-video p-3 rounded-xl"><span>Save Video</span></button>
+      <button onclick="forceDownload('${audio}','${name}.mp3',this)" class="btn btn-audio p-3 rounded-xl"><span>Save Audio</span></button>
     </div>
   </div>`;
 }
 
 function showPhotos(images,name){
-  result.innerHTML=`<div class="bg-gray-700 p-4 rounded-lg">
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+  result.innerHTML=`<div class="result-card bg-gray-800/60 p-6 rounded-2xl border border-gray-700">
+    <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
       ${images.map((img,i)=>`
-        <div class="relative border border-gray-600 rounded-lg overflow-hidden">
-          <img src="${img}" class="w-full h-32 object-cover">
+        <div class="relative rounded-lg overflow-hidden border border-gray-600">
+          <img src="${img}" class="w-full h-auto block">
           <input type="checkbox" value="${img}" class="absolute top-2 left-2 w-5 h-5 accent-green-500">
           <button onclick="forceDownload('${img}','${name}_${i+1}.jpg',this)" 
             class="absolute bottom-2 right-2 bg-black/60 text-white px-2 py-1 rounded text-xs">
@@ -68,9 +86,9 @@ function showPhotos(images,name){
           </button>
         </div>`).join("")}
     </div>
-    <div class="flex justify-between gap-2">
-      <input type="text" id="filenameInput" value="${name}" class="flex-1 bg-gray-600 p-2 rounded text-sm outline-none">
-      <button onclick="downloadSelected('${name}',this)" class="bg-purple-600 px-4 py-2 rounded text-sm"><span>Download Selected</span></button>
+    <div class="flex gap-2">
+      <input type="text" id="filenameInput" value="${name}" class="flex-1 bg-gray-700 p-2 rounded-lg text-sm outline-none">
+      <button onclick="downloadSelected('${name}',this)" class="btn btn-main px-4 py-2 rounded-lg"><span>Download Selected</span></button>
     </div>
   </div>`;
 }
@@ -95,12 +113,11 @@ async function downloadSelected(baseName,btn){
   const name=input?input.value.trim()||baseName:baseName;
   const span=btn.querySelector("span")||btn;
   const old=span.textContent;btn.disabled=true;span.textContent="Processing...";
-
   try{
-    if(files.length===1){ // single photo → save directly
+    if(files.length===1){
       const b=await fetch(files[0]).then(r=>r.blob());
       saveAs(b,`${name}.jpg`);
-    }else{ // multiple → zip
+    }else{
       const zip=new JSZip();let i=1;
       for(const u of files){const b=await fetch(u).then(r=>r.blob());zip.file(`${name}_${i++}.jpg`,b);}
       const c=await zip.generateAsync({type:"blob"});saveAs(c,`${name}.zip`);
